@@ -30,6 +30,7 @@ export class AdminUserDetailsPage extends BasePage {
     await this.statusSelect.click();
     await this.page.getByRole('option', { name: 'Active', exact: true }).click();
     await this.saveButton.click();
+    await expect(this.page.getByText('User updated successfully')).toBeVisible();
     await this.expectActive();
   }
 

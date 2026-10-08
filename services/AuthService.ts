@@ -50,11 +50,13 @@ export class AuthService {
   async loginAsAgent(agent: UserData, password: string = agent.password): Promise<void> {
     await this.resetSession();
 
-    const knownMail = await this.gmail.listIds(agent.email);
-    await this.login.submitCredentials(agent.phone, password);
+    const knownMail = await this.gmail.listIds(agent.email, 'Login OTP');
+    await this.login.submitCredentials(agent.email, password);
 
-    const mail = await this.gmail.waitForNewMessage(agent.email, knownMail);
-    await this.login.completeOtp(GmailService.extractOtp(mail));
+    const mail = await this.gmail.waitForNewMessage(agent.email, knownMail, { subject: 'Login OTP' });
+    const otp = GmailService.extractOtp(mail);
+    if (!otp) throw new Error(`Login OTP was not found in the email. Snippet: ${mail.snippet}`);
+    await this.login.completeOtp(otp);
   }
 
   /** Negative path: submit credentials that must be rejected. */
@@ -74,20 +76,17 @@ export class AuthService {
    * request reset -> read the e-mail -> open the link / enter the code -> set new password.
    */
   async resetPassword(user: UserData, newPassword: string): Promise<void> {
-    const knownMail = await this.gmail.listIds(user.email);
+    const knownMail = await this.gmail.listIds(user.email, 'Password Reset');
 
-    await this.login.open();
-    await this.login.clickForgotPassword();
+    await this.page.goto('/forgot-password');
     await this.forgot.requestReset(user.email);
 
-    const mail = await this.gmail.waitForNewMessage(user.email, knownMail);
+    const mail = await this.gmail.waitForNewMessage(user.email, knownMail, { subject: 'Password Reset' });
     const link = GmailService.extractResetLink(mail, new URL(ENV.baseURL).host);
-
-    if (link) {
-      await this.page.goto(link);
-    } else {
-      await this.forgot.enterCodeIfAsked(GmailService.extractOtp(mail));
+    if (!link) {
+      throw new Error(`Password reset link was not found in the email. Snippet: ${mail.snippet}`);
     }
+    await this.page.goto(link);
     await this.forgot.setNewPassword(newPassword);
   }
 }

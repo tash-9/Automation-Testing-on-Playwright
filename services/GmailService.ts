@@ -46,11 +46,15 @@ export class GmailService {
           grant_type: 'refresh_token',
         },
       });
-      if (!res.ok()) throw new Error(`Gmail token refresh failed: ${res.status()} ${await res.text()}`);
-      const body = await res.json();
-      this.cachedToken = body.access_token;
-      this.tokenExpiresAt = Date.now() + (body.expires_in ?? 3600) * 1000;
-      return this.cachedToken;
+      if (res.ok()) {
+        const body = await res.json();
+        this.cachedToken = body.access_token;
+        this.tokenExpiresAt = Date.now() + (body.expires_in ?? 3600) * 1000;
+        return this.cachedToken;
+      }
+      if (!accessToken) {
+        throw new Error(`Gmail token refresh failed: ${res.status()} ${await res.text()}`);
+      }
     }
 
     if (accessToken) return accessToken;
@@ -72,8 +76,9 @@ export class GmailService {
   // ------------------------------------------------------------ messages ---
 
   /** Ids of the newest messages sent to `toAddress` (newest first). */
-  async listIds(toAddress: string): Promise<string[]> {
-    const q = encodeURIComponent(`to:${toAddress}`);
+  async listIds(toAddress: string, subject?: string): Promise<string[]> {
+    const query = subject ? `to:${toAddress} subject:(${subject})` : `to:${toAddress}`;
+    const q = encodeURIComponent(query);
     const body = await this.get(`/messages?q=${q}&maxResults=10`);
     return (body.messages ?? []).map((m: { id: string }) => m.id);
   }
@@ -124,11 +129,15 @@ export class GmailService {
   async waitForNewMessage(
     toAddress: string,
     knownIds: string[],
-    { attempts = 30, intervalMs = 1500 }: { attempts?: number; intervalMs?: number } = {},
+    {
+      attempts = 40,
+      intervalMs = 3000,
+      subject,
+    }: { attempts?: number; intervalMs?: number; subject?: string } = {},
   ): Promise<MailMessage> {
     for (let i = 0; i < attempts; i++) {
       await new Promise((r) => setTimeout(r, intervalMs));
-      const ids = await this.listIds(toAddress);
+      const ids = await this.listIds(toAddress, subject);
       const fresh = ids.find((id) => !knownIds.includes(id));
       if (fresh) return this.getMessage(fresh);
     }
@@ -143,6 +152,8 @@ export class GmailService {
   /** 4-6 digit one-time code. Prefers a number right after the words OTP/code. */
   static extractOtp(msg: Pick<MailMessage, 'text' | 'snippet'>): string {
     for (const source of [msg.text, msg.snippet]) {
+      const labeled = source.match(/is:\s*(\d{4})\b/);
+      if (labeled) return labeled[1];
       const near = source.match(/(?:otp|code|pin)\D{0,40}(\d{4,6})\b/i);
       if (near) return near[1];
     }

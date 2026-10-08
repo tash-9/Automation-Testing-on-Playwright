@@ -24,8 +24,13 @@ One automated story walks a new **Agent** through the whole lifecycle — sign-u
 
 ---
 
-## 🎥 Demo Video 
+## 🎥 Demo Video
 
+Headed Chromium recording of the full regression journey (20 tests, 2.6 minutes):
+
+[Watch dmoney-e2e-headed.webm](docs/dmoney-e2e-headed.webm)
+
+Recorded with `RECORD_VIDEO=true` and `npm run test:regression:headed`.
 
 ---
 
@@ -33,12 +38,15 @@ One automated story walks a new **Agent** through the whole lifecycle — sign-u
 
 All 20 tests (positive + negative) — `npm run test:regression`
 
+![Regression Test Result](docs/regression-test-result.png)
 
 ---
 
 ## 🚬 SmokeTest Result
 
-Positive test cases only (19 tests) — `npm run test:smoke`
+Positive test cases only (19 tests). The negative case, TC17, is excluded — `npm run test:smoke`
+
+![Smoke Test Result](docs/smoke-test-result.png)
 
 
 ---
@@ -147,7 +155,7 @@ test('TC03 | Admin login is successful', POSITIVE, async ({ auth }) => { ... });
 │   ├── fixtures.ts                #   shared browser page, Gmail, auth, failure screenshot
 │   └── dmoney-e2e.spec.ts         #   the 20 test cases (TC01 - TC20)
 ├── output/                        # generated self_statement_<date>.csv lands here
-├── docs/                          # screenshots used by this README
+├── docs/                          # headed-run video + regression/smoke screenshots
 ├── .github/workflows/             # CI (typecheck + discovery) and self-hosted E2E
 ├── playwright.config.ts
 ├── .env.example
@@ -177,7 +185,7 @@ Fill in `.env` (see the comments inside `.env.example`). The important values:
 | `GMAIL_ACCESS_TOKEN` | Quick alternative to the three above — expires after ~1 hour |
 | `EXISTING_CUSTOMER_PHONE` | Phone of an existing **active** customer for the 500 Tk cash-in |
 | `AGENT_NEW_PASSWORD` | Password the agent is switched to in the reset step |
-| `EXPECTED_AGENT_BALANCE_AFTER_CASHIN` | Only needed if the portal pays commission; default is `2000 − 500 = 1500` |
+| `EXPECTED_AGENT_BALANCE_AFTER_CASHIN` | Override only if the commission rate changes. Default is `2000 − 500 + 12.50 = 1512.50` (`COMMISSION_RATE=0.025`) |
 
 ### Getting Gmail credentials
 1. [Google Cloud Console](https://console.cloud.google.com) → create a project → enable the **Gmail API**.

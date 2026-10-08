@@ -5,7 +5,7 @@ dotenv.config({ path: path.resolve(__dirname, '..', '.env') });
 
 /** Reads an env var, falling back to a default when it is empty/undefined. */
 function read(name: string, fallback = ''): string {
-  const value = process.env[name];
+  const value = process.env[name]?.trim();
   return value === undefined || value === '' ? fallback : value;
 }
 
@@ -17,6 +17,10 @@ function readNumber(name: string, fallback: number): number {
 
 const systemDeposit = readNumber('SYSTEM_DEPOSIT_AMOUNT', 2000);
 const customerDeposit = readNumber('CUSTOMER_DEPOSIT_AMOUNT', 500);
+/** Agent commission on a customer cash-in. The live portal credits 2.5%. */
+const commissionRate = readNumber('COMMISSION_RATE', 0.025);
+const defaultBalanceAfterCashIn =
+  systemDeposit - customerDeposit + customerDeposit * commissionRate;
 
 export const ENV = {
   baseURL: read('BASE_URL', 'https://dmoneyportal.roadtocareer.net'),
@@ -53,14 +57,14 @@ export const ENV = {
   amounts: {
     systemDeposit,
     customerDeposit,
+    commissionRate,
     /**
-     * Agent balance expected after the cash-in to the customer.
-     * Defaults to deposit - cash-in. If the portal credits the agent a
-     * commission, set EXPECTED_AGENT_BALANCE_AFTER_CASHIN in .env.
+     * Agent balance after the customer cash-in.
+     * Default is 2000 - 500 + (500 * 2.5%) = 1512.5.
      */
     agentBalanceAfterCashIn: readNumber(
       'EXPECTED_AGENT_BALANCE_AFTER_CASHIN',
-      systemDeposit - customerDeposit,
+      defaultBalanceAfterCashIn,
     ),
   },
 

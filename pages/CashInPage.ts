@@ -18,16 +18,26 @@ export class CashInPage extends BasePage {
     await expect(this.phone).toBeVisible();
   }
 
-  async cashIn(phone: string, amount: number): Promise<void> {
+  async cashIn(phone: string, amount: number): Promise<{ trnxId: string }> {
     await this.phone.fill(phone);
     await this.amount.fill(String(amount));
-    await this.submit.click();
-  }
-
-  /** The app shows a transient success notification; matched loosely on purpose. */
-  async expectSuccess(): Promise<void> {
-    await expect(
-      this.page.getByText(/success|successful|cash.?in successful/i).first(),
-    ).toBeVisible({ timeout: 20_000 });
+    const [response] = await Promise.all([
+      this.page.waitForResponse(
+        (r) => r.url().includes('/transaction/deposit') && r.request().method() === 'POST',
+      ),
+      this.submit.click(),
+    ]);
+    const body = await response.json().catch(() => ({} as { message?: string; trnxId?: string }));
+    if (response.status() !== 201) {
+      const message = String(body.message ?? response.status());
+      if (/limit|cannot deposit|not found|inactive|invalid/i.test(message)) {
+        throw new Error(`DEPOSIT_REJECTED: ${message}`);
+      }
+      throw new Error(`Deposit of ${amount} Tk failed (${response.status()}): ${message}`);
+    }
+    const trnxId = body.trnxId ?? '';
+    expect(trnxId, 'Deposit response should include a transaction id').toBeTruthy();
+    await expect(this.page.getByText(/success/i).first()).toBeVisible({ timeout: 20_000 });
+    return { trnxId };
   }
 }

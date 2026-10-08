@@ -36,12 +36,13 @@ export class ForgotPasswordPage extends BasePage {
   }
 
   async setNewPassword(password: string): Promise<void> {
-    await expect(this.newPassword).toBeVisible({ timeout: 20_000 });
-    await this.newPassword.fill(password);
-    if (await this.confirmPassword.isVisible().catch(() => false)) {
-      await this.confirmPassword.fill(password);
+    const passwordFields = this.page.locator('input[type="password"]');
+    await expect(passwordFields.first()).toBeVisible({ timeout: 20_000 });
+    await passwordFields.nth(0).fill(password);
+    if (await passwordFields.nth(1).isVisible().catch(() => false)) {
+      await passwordFields.nth(1).fill(password);
     }
-    await this.submit.click();
+    await this.page.getByRole('button', { name: /reset password/i }).click();
   }
 
   /** Success toast/message OR being sent back to the login page. */

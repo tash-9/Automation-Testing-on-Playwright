@@ -4,8 +4,10 @@ import { test, expect } from './fixtures';
 import { ENV } from '../utils/env';
 import { TestDataGenerator, UserData } from '../utils/TestDataGenerator';
 import { parseCsv, saveSelfStatementCsv, selfStatementFileName, TableData } from '../utils/CsvUtil';
+import { Browser } from '@playwright/test';
 import { HomePage } from '../pages/HomePage';
 import { RegisterPage } from '../pages/RegisterPage';
+import { LoginPage } from '../pages/LoginPage';
 import { AdminUsersPage } from '../pages/AdminUsersPage';
 import { AdminUserDetailsPage } from '../pages/AdminUserDetailsPage';
 import { CashInPage } from '../pages/CashInPage';
@@ -25,6 +27,33 @@ const NEGATIVE = { tag: ['@negative', '@regression'] };
 
 const { systemDeposit, customerDeposit, agentBalanceAfterCashIn } = ENV.amounts;
 
+/** Used only when the configured customer rejects the 500 Tk cash-in. */
+async function createActiveCustomer(browser: Browser, avoidEmail: string): Promise<string> {
+  const customer = TestDataGenerator.uniqueCustomer(ENV.gmail.baseLocal, ENV.agentPassword);
+  if (customer.email === avoidEmail) customer.email = customer.email.replace('@', '.x@');
+  const context = await browser.newContext({ baseURL: ENV.baseURL });
+  try {
+    const page = await context.newPage();
+    const register = new RegisterPage(page);
+    await register.open();
+    await register.register(customer, 'Customer');
+    await register.expectRegistrationSuccess();
+
+    const login = new LoginPage(page);
+    await login.open();
+    await login.submitCredentials(ENV.admin.email, ENV.admin.password);
+    await page.waitForURL(/profile/);
+
+    const adminUsers = new AdminUsersPage(page);
+    await adminUsers.open();
+    const details = await adminUsers.openUserByEmail(customer.email);
+    await details.activate();
+    return customer.phone;
+  } finally {
+    await context.close();
+  }
+}
+
 // The journey is ONE story: each test needs the state left by the previous one.
 test.describe.configure({ mode: 'serial' });
 
@@ -32,6 +61,7 @@ test.describe('dMoney - Agent end-to-end journey', () => {
   // ---- state shared between the tests of the journey ------------------------
   let agent: UserData;
   let newPassword: string;
+  let customerPhone: string;
   let selfStatement: TableData;
   let csvPath: string;
 
@@ -48,6 +78,7 @@ test.describe('dMoney - Agent end-to-end journey', () => {
   test.beforeAll(async ({ sharedPage }) => {
     agent = TestDataGenerator.uniqueAgent(ENV.gmail.baseLocal, ENV.agentPassword);
     newPassword = ENV.agentNewPassword;
+    customerPhone = ENV.existingCustomerPhone;
 
     home = new HomePage(sharedPage);
     register = new RegisterPage(sharedPage);
@@ -85,11 +116,11 @@ test.describe('dMoney - Agent end-to-end journey', () => {
 
   test('TC04 | Newly created Agent appears in the Admin user list', POSITIVE, async () => {
     await adminUsers.open();
-    await adminUsers.expectUserListed(agent.phone);
+    await adminUsers.expectUserListed(agent.email);
   });
 
   test('TC02 | Newly created Agent is initially inactive (Pending)', POSITIVE, async () => {
-    userDetails = await adminUsers.openUserByPhone(agent.phone);
+    userDetails = await adminUsers.openUserByEmail(agent.email);
     await userDetails.expectPending();
   });
 
@@ -117,7 +148,6 @@ test.describe('dMoney - Agent end-to-end journey', () => {
   test(`TC08 | System can deposit ${systemDeposit} Tk to the Agent`, POSITIVE, async () => {
     await cashIn.open();
     await cashIn.cashIn(agent.phone, systemDeposit);
-    await cashIn.expectSuccess();
   });
 
   test('TC09 | System deposit creates the correct transaction record', POSITIVE, async ({ auth }) => {
@@ -147,10 +177,16 @@ test.describe('dMoney - Agent end-to-end journey', () => {
     await profile.expectBalance(systemDeposit);
   });
 
-  test(`TC12 | Agent can deposit ${customerDeposit} Tk to an existing Customer`, POSITIVE, async () => {
+  test(`TC12 | Agent can deposit ${customerDeposit} Tk to an existing Customer`, POSITIVE, async ({ browser }) => {
     await cashIn.open();
-    await cashIn.cashIn(ENV.existingCustomerPhone, customerDeposit);
-    await cashIn.expectSuccess();
+    try {
+      await cashIn.cashIn(customerPhone, customerDeposit);
+    } catch (error) {
+      if (!(error instanceof Error) || !error.message.startsWith('DEPOSIT_REJECTED:')) throw error;
+      customerPhone = await createActiveCustomer(browser, agent.email);
+      await cashIn.open();
+      await cashIn.cashIn(customerPhone, customerDeposit);
+    }
   });
 
   test('TC13 | Agent balance is updated correctly after the transaction', POSITIVE, async () => {
@@ -162,8 +198,8 @@ test.describe('dMoney - Agent end-to-end journey', () => {
     await statement.open();
     const data = await statement.extractAll();
     expect(
-      StatementPage.hasRowWith(data, customerDeposit, [ENV.existingCustomerPhone]),
-      `Self Statement should contain a ${customerDeposit} Tk row for ${ENV.existingCustomerPhone}`,
+      StatementPage.hasRowWith(data, customerDeposit, [customerPhone]),
+      `Self Statement should contain a ${customerDeposit} Tk row for ${customerPhone}`,
     ).toBe(true);
   });
 
@@ -202,8 +238,8 @@ test.describe('dMoney - Agent end-to-end journey', () => {
       `statement should contain the ${systemDeposit} Tk deposit received from System`,
     ).toBe(true);
     expect(
-      StatementPage.hasRowWith(selfStatement, customerDeposit, [ENV.existingCustomerPhone]),
-      `statement should contain the ${customerDeposit} Tk cash-in to ${ENV.existingCustomerPhone}`,
+      StatementPage.hasRowWith(selfStatement, customerDeposit, [customerPhone]),
+      `statement should contain the ${customerDeposit} Tk cash-in to ${customerPhone}`,
     ).toBe(true);
   });
 

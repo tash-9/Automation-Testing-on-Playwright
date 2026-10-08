@@ -53,5 +53,6 @@ export class RegisterPage extends BasePage {
 
   async expectRegistrationSuccess(): Promise<void> {
     await expect(this.page.getByText(/Registration successful/i)).toBeVisible();
+    await expect(this.page).toHaveURL(/\/login/);
   }
 }
