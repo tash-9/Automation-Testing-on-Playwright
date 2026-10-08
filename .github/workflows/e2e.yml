@@ -1,0 +1,63 @@
+name: E2E (self-hosted)
+
+on:
+  workflow_dispatch:
+    inputs:
+      suite:
+        description: 'Which suite to run'
+        type: choice
+        options: [smoke, regression]
+        default: smoke
+
+jobs:
+  e2e:
+    name: dMoney E2E (${{ inputs.suite }})
+    timeout-minutes: 30
+    runs-on: [self-hosted]
+
+    env:
+      BASE_URL: https://dmoneyportal.roadtocareer.net
+      ADMIN_EMAIL: admin@dmoney.com
+      ADMIN_PASSWORD: '1234'
+      SYSTEM_EMAIL: system@dmoney.com
+      SYSTEM_PASSWORD: '1234'
+      AGENT_PASSWORD: '1234'
+      AGENT_NEW_PASSWORD: 'Reset@5678'
+      SYSTEM_DEPOSIT_AMOUNT: '2000'
+      CUSTOMER_DEPOSIT_AMOUNT: '500'
+      EXISTING_CUSTOMER_PHONE: ${{ vars.EXISTING_CUSTOMER_PHONE }}
+      EXPECTED_AGENT_BALANCE_AFTER_CASHIN: ${{ vars.EXPECTED_AGENT_BALANCE_AFTER_CASHIN }}
+      GMAIL_BASE_LOCAL: ${{ secrets.GMAIL_BASE_LOCAL }}
+      GMAIL_CLIENT_ID: ${{ secrets.GMAIL_CLIENT_ID }}
+      GMAIL_CLIENT_SECRET: ${{ secrets.GMAIL_CLIENT_SECRET }}
+      GMAIL_REFRESH_TOKEN: ${{ secrets.GMAIL_REFRESH_TOKEN }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx playwright install chromium
+
+      - name: Run Playwright suite
+        run: npm run test:${{ inputs.suite }}
+
+      - name: Upload HTML report
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: playwright-report-${{ inputs.suite }}
+          path: playwright-report-*/
+          retention-days: 30
+
+      - name: Upload Self Statement CSV
+        uses: actions/upload-artifact@v4
+        if: ${{ !cancelled() }}
+        with:
+          name: self-statement-csv
+          path: output/*.csv
+          if-no-files-found: ignore

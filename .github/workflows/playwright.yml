@@ -1,0 +1,31 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:
+
+jobs:
+  validate:
+    name: Install · Typecheck · Suite wiring
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+      - run: npx playwright install chromium
+
+      - name: List regression group (expects 20 tests)
+        run: npx playwright test --list --grep @regression
+
+      - name: List smoke group (expects 19 tests)
+        run: npx playwright test --list --grep @smoke

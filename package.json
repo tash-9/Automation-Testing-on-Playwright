@@ -1,0 +1,28 @@
+{
+  "name": "dmoney-playwright-automation",
+  "version": "2.0.0",
+  "description": "Playwright + TypeScript E2E automation for the dMoney QA Practice Platform (Batch 19 assignment).",
+  "type": "commonjs",
+  "scripts": {
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:regression": "cross-env REPORT_DIR=playwright-report-regression playwright test --grep @regression",
+    "test:regression:headed": "cross-env REPORT_DIR=playwright-report-regression playwright test --grep @regression --headed",
+    "test:smoke": "cross-env REPORT_DIR=playwright-report-smoke playwright test --grep @smoke",
+    "test:smoke:headed": "cross-env REPORT_DIR=playwright-report-smoke playwright test --grep @smoke --headed",
+    "test:ui": "playwright test --ui",
+    "typecheck": "tsc --noEmit",
+    "report": "playwright show-report",
+    "report:regression": "playwright show-report playwright-report-regression",
+    "report:smoke": "playwright show-report playwright-report-smoke"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.61.1",
+    "@types/node": "^22.10.0",
+    "cross-env": "^7.0.3",
+    "typescript": "^5.9.3"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7"
+  }
+}

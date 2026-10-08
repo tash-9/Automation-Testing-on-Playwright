@@ -1,0 +1,32 @@
+# dependencies
+node_modules/
+
+# secrets / local config
+.env
+auth.json
+/playwright/.auth/
+
+# Playwright artifacts
+/test-results/
+/playwright-report/
+/playwright-report-smoke/
+/playwright-report-regression/
+/blob-report/
+/playwright/.cache/
+/videos/
+
+# generated Self Statement exports (keep the folder, not the daily files)
+/output/*.csv
+!/output/.gitkeep
+
+# OS / editor noise
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.log
+
+#AI agents
+.qodo
+.kilo
+.claude
