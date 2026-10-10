@@ -3,12 +3,12 @@
 End-to-end test automation for the **dMoney QA Practice Platform**, built with **Playwright + TypeScript** and the **Page Object Model**.
 One automated story walks a new **Agent** through the whole lifecycle — sign-up → admin activation → system funding → agent login (email OTP) → cash-in to a customer → logout → password reset → Self Statement export to CSV — and verifies **20 checkpoints** along the way.
 
-> **Batch 19 · Topic: Playwright** &nbsp;|&nbsp; App under test: <https://dmoneyportal.roadtocareer.net>
+> App under test: <https://dmoneyportal.roadtocareer.net>
 
 ---
 
 ## 📑 Table of Contents
-1. [Demo Video](#-demo-video-headed-mode)
+1. [Demo Video](https://drive.google.com/drive/folders/1ljK3dD1FDJd7_XqM1a2Whs4mpi76WJFw)
 2. [Regression Test Result](#-regression-test-result)
 3. [Smoke Test Result](#-smoketest-result)
 4. [Scenario](#-scenario)
@@ -26,11 +26,10 @@ One automated story walks a new **Agent** through the whole lifecycle — sign-u
 
 ## 🎥 Demo Video
 
-Headed Chromium recording of the full regression journey (20 tests, 2.6 minutes):
+Headed Chromium recording of the full regression journey (20 tests, 2.6 minutes)
 
-[Watch dmoney-e2e-headed.webm](docs/dmoney-e2e-headed.webm)
+[Watch dmoney-e2e-headed.webm](https://drive.google.com/drive/folders/1ljK3dD1FDJd7_XqM1a2Whs4mpi76WJFw)
 
-Recorded with `RECORD_VIDEO=true` and `npm run test:regression:headed`.
 
 ---
 
@@ -164,7 +163,7 @@ test('TC03 | Admin login is successful', POSITIVE, async ({ auth }) => { ... });
 
 ---
 
-## ⚙️ Setup
+## 🔧 Setup
 
 **Requirements:** Node.js 20+, a Gmail account (the portal e-mails an OTP and the password-reset link).
 
@@ -196,7 +195,7 @@ Fill in `.env` (see the comments inside `.env.example`). The important values:
 
 ---
 
-## ▶️ Running the Tests
+## 🚀 Running the Tests
 
 ```bash
 npm run test:regression           # all 20 tests, headless
@@ -259,5 +258,5 @@ Secrets: `GMAIL_BASE_LOCAL`, `GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_RE
 
 ---
 
-## ✍️ Author
+## 📝 Author
 Tasfia Islam Raisha
